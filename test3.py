@@ -389,17 +389,17 @@ def make_action(screen, info, step, env, prev_action):
                 if enemy_x - mario_location[0] < 50 and enemy_x - mario_location[0] > 0:
                     if mario_location[1] > 190:
                         if enemy_x - mario_location[0] < 17:
-                            print("wanghuizou")
+                            print("Running away from the enemy")
                             return 9
                         if enemy_x - mario_location[0] > 20:
-                            print("wotiaole")
+                            print("jumping and running")
                             return 4 
                     if mario_location[1] < 130:
                         if enemy_x - mario_location[0] < 20:
-                            print("aiming the enemies")
+                            print("trying to land on the enemy")
                             return 3
                         if mario_location[0] - enemy_x < 20:
-                            print("aiming the enemies")
+                            print("aiming to land on the enemy")
                             return 8
                     
                     # print("wotiaole")
@@ -477,7 +477,38 @@ def make_action(screen, info, step, env, prev_action):
 
 
 ################################################################################
+#Supporting function
+def is_platform_above(screen, mario_location, threshold_distance=32):
+    """
+    Check if there's a platform or obstacle above Mario within a certain threshold distance.
 
+    Parameters:
+    - screen: The current game screen/frame.
+    - mario_location: Tuple containing Mario's current (x, y) coordinates.
+    - threshold_distance: The vertical distance to check above Mario for platforms. Default is 32 pixels.
+
+    Returns:
+    - True if there's a platform or obstacle above Mario within the threshold distance. False otherwise.
+    """
+
+    # Get the x and y coordinates of Mario
+    mario_x, mario_y = mario_location
+
+    # Define the region of interest above Mario
+    roi = screen[mario_y - threshold_distance:mario_y, mario_x - 16:mario_x + 16]
+
+    # Use the object detection mechanism to detect blocks or platforms in the region of interest
+    detected_objects = locate_objects(roi, "small")  # Assuming Mario is small; adjust as needed
+
+    # Check for blocks or platforms in the detected objects
+    for category, objects in detected_objects.items():
+        if category == "block" and objects:
+            return True
+
+    return False
+
+
+################################################################################
 env = gym.make("SuperMarioBros-v0", apply_api_compatibility=True, render_mode="human")
 env = JoypadSpace(env, COMPLEX_MOVEMENT)
 
