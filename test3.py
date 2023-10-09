@@ -1,5 +1,5 @@
 from nes_py.wrappers import JoypadSpace
-from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
+from gym_super_mario_bros.actions import SIMPLE_MOVEMENT, COMPLEX_MOVEMENT
 import gym
 import cv2 as cv
 import numpy as np
@@ -14,7 +14,7 @@ import string
 ################################################################################
 
 # change these values if you want more/less printing
-PRINT_GRID      = True
+PRINT_GRID      = False
 PRINT_LOCATIONS = True
 
 # If printing the grid doesn't display in an understandable way, change the
@@ -55,7 +55,10 @@ image_files = {
         "koopa": ["koopaA.png", "koopaB.png"],
     },
     "block": {
-        "block": ["block1.png", "block2.png", "block3.png", "block4.png"],
+        "block1": ["block1.png"],
+        "block2": ["block2.png"],
+        "block3": ["block3.png"],
+        "block4": ["block4.png"],
         "question_block": ["questionA.png", "questionB.png", "questionC.png"],
         "pipe": ["pipe_upper_section.png", "pipe_lower_section.png"],
     },
@@ -373,57 +376,49 @@ def make_action(screen, info, step, env, prev_action):
     #             return 2  # This corresponds to the "right jump" action in SIMPLE_MOVEMENT
 
     if enemy_locations:
-        print("##############################################node16") 
+        # print("##############################################node16") 
         for enemy in enemy_locations:
+            print(enemy_locations)
+            if enemy[0][0] < mario_x:
+                continue
             enemy_x = enemy[0][0]  # grabbing the location of the first enemy detected
         # If Mario is found, use its location. If not, it's safer not to jump.
             if mario_locations:
                 mario_location = mario_locations[0][0]
                 # Check if the first enemy is to the right of Mario
-                if enemy_x - mario_location[0] < 40 and enemy_x - mario_location[0] > 0:
-                    if enemy_x - mario_location[0] < 17:
-                        return 5
-                    print("wotiaole")
-                    return 2  # This corresponds to the "right jump" action in SIMPLE_MOVEMENT
+                if enemy_x - mario_location[0] < 50 and enemy_x - mario_location[0] > 0:
+                    if mario_location[1] > 190:
+                        if enemy_x - mario_location[0] < 17:
+                            print("wanghuizou")
+                            return 9
+                        if enemy_x - mario_location[0] > 20:
+                            print("wotiaole")
+                            return 4 
+                    if mario_location[1] < 130:
+                        if enemy_x - mario_location[0] < 20:
+                            print("aiming the enemies")
+                            return 3
+                        if mario_location[0] - enemy_x < 20:
+                            print("aiming the enemies")
+                            return 8
+                    
+                    # print("wotiaole")
+                    # return 2  # This corresponds to the "right jump" action in SIMPLE_MOVEMENT
 
-    # for block in block_locations:
-    #     block_x = block[0][0]
-    #     print("##############################################node12") 
-    #     print(f"{block_x}")
-    #     # If Mario is approaching the pipe (i.e., Mario is to the left of the pipe and close to it), make him jump.
-    #     # if mario_locations:
-    #     #     mario_x = mario_locations[0][0]  # Mario's x-coordinate
-    #     #     if mario_x <= block_x and (block_x - mario_x) < 4:  # The number 30 is arbitrary; you might need to adjust this
-    #     #         action = 2  # Jump
-    #     #         break
-    #     if block_x <= 35:
-    #         action = 2  # Jump
-    #         break
-    
-    # print(f"{block_locations[0][0][0]}node12")
-    # if block_locations[0][0][0] <= 30:
-    #     return 2
-    # global blockcount  # 声明blockcount为全局变量
-    # print(f"{block_locations[blockcount][0][0]}node12")  # 打印当前block_locations元素的第一个子元素的第一个值，后跟字符串"node12"
-    # if block_locations[blockcount][0][0] <= 30:  # 检查当前block_locations元素的第一个子元素的第一个值是否小于或等于30
-    #     if blockcount <= len(block_locations):
-    #         blockcount = blockcount + 1
-    #     return 2  # 如果条件满足，则返回2，并退出循环和函数
-    # i会在下一次循环迭代中自动递增，无需手动递增
     if pipe_locations:
-        print("##############################################node15") 
+        # print("##############################################node15") 
         for pipe in pipe_locations:
             pipe_x = pipe[0][0]
-            print(f"{pipe_x}")
+            # print(f"{pipe_x}")
             if mario_locations:
                 mario_x = mario_locations[0][0][0]  # Mario's x-coordinate
-                print(f"{mario_x}")
+                # print(f"{mario_x}")
                 if mario_x <= pipe_x and (pipe_x - mario_x) >= 11 and (pipe_x - mario_x) <= 15:
                     print("chuizhitiao")
                     return 6
                 if mario_x <= pipe_x and (pipe_x - mario_x) < 45:  # The number 30 is arbitrary; you might need to adjust this
                     print("wotiaole2")
-                    return 2
+                    return 4
     
     if block_locations:
         for index, block in enumerate(block_locations):
@@ -431,6 +426,8 @@ def make_action(screen, info, step, env, prev_action):
             block_x = block[0][0]
             block_y = block[0][1]
             block_height = block[1][1]
+            block_width = block[1][0]
+            block_name = block[2]
             if index + 1 < len(block_locations):
                 # 获取下一个块的值
                 next_block = block_locations[index + 1]
@@ -440,27 +437,41 @@ def make_action(screen, info, step, env, prev_action):
                 if (block_y == 224) and (next_block_y == 224):
                     current_x = block_x
                     next_x = next_block_x
-                    print(f"{next_x - current_x}")
+                    # print(f"{next_x - current_x}")
                     # print(f"{next_x}")
                     # print(f"{current_x}")
                     # 检查两个块之间的间隔是否大于正常间隔
-                    if (next_x - current_x > 16) and (current_x < 130):
-                        print("1231231231231231231mmmmmmmmmm")
+                    if mario_locations:
+                        if (next_x - current_x > 16) and (current_x - mario_locations[0][0][0] < 20):
+                            print("jumping over the gap")
+                            if (next_x - current_x <= 32):
+                                return 2
+                            if (next_x - current_x > 32):
+                                return 4
+                                
+            #for the question block
+            if block_name == 'question_block':
+                if mario_locations:
+                    if(mario_locations[0][0][0] < block_x) and (block_x - mario_locations[0][0][0] <= 24):
+                        print("jump to touch the question block")
                         return 2
-                
+                    
 
     
 
 
-    if step % 10 == 0:
-        # I have no strategy at the moment, so I'll choose a random action.
-        action = 1
-        return action
-    else:
-        # With a random agent, I found that choosing the same random action
-        # 10 times in a row leads to slightly better performance than choosing
-        # a new random action every step.
-        return 1
+    # if step % 10 == 0:
+    #     # I have no strategy at the moment, so I'll choose a random action.
+    #     action = 1
+    #     return action
+    # else:
+    #     # With a random agent, I found that choosing the same random action
+    #     # 10 times in a row leads to slightly better performance than choosing
+    #     # a new random action every step.
+    print("return 3")
+    # if not enemy_locations:
+    #     return 1
+    return 3
 
 
 
@@ -468,7 +479,7 @@ def make_action(screen, info, step, env, prev_action):
 ################################################################################
 
 env = gym.make("SuperMarioBros-v0", apply_api_compatibility=True, render_mode="human")
-env = JoypadSpace(env, SIMPLE_MOVEMENT)
+env = JoypadSpace(env, COMPLEX_MOVEMENT)
 
 obs = None
 done = True
