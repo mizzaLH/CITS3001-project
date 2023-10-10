@@ -384,7 +384,7 @@ def make_action(screen, info, step, env, prev_action):
             enemy_x = enemy[0][0]  # grabbing the location of the first enemy detected
         # If Mario is found, use its location. If not, it's safer not to jump.
             if mario_locations:
-                mario_location = mario_locations[0][0]
+                mario_location = mario_locations[0][0] 
                 # Check if the first enemy is to the right of Mario
                 if enemy_x - mario_location[0] < 50 and enemy_x - mario_location[0] > 0:
                     if mario_location[1] > 190:
@@ -394,13 +394,13 @@ def make_action(screen, info, step, env, prev_action):
                         if enemy_x - mario_location[0] > 20:
                             print("wotiaole")
                             return 4 
-                    if mario_location[1] < 130:
-                        if enemy_x - mario_location[0] < 20:
-                            print("aiming the enemies")
-                            return 3
-                        if mario_location[0] - enemy_x < 20:
-                            print("aiming the enemies")
-                            return 8
+                    # if (mario_location[1] < 160) and (mario_location[1] > 130):
+                    #     if enemy_x - mario_location[0] < 20:
+                    #         print("aiming the enemies")
+                    #         return 3
+                    #     if mario_location[0] - enemy_x < 20:
+                    #         print("aiming the enemies")
+                    #         return 8
                     
                     # print("wotiaole")
                     # return 2  # This corresponds to the "right jump" action in SIMPLE_MOVEMENT
@@ -413,7 +413,7 @@ def make_action(screen, info, step, env, prev_action):
             if mario_locations:
                 mario_x = mario_locations[0][0][0]  # Mario's x-coordinate
                 # print(f"{mario_x}")
-                if mario_x <= pipe_x and (pipe_x - mario_x) >= 11 and (pipe_x - mario_x) <= 15:
+                if mario_x <= pipe_x and (pipe_x - mario_x) >= 11 and (pipe_x - mario_x) <= 13:
                     print("chuizhitiao")
                     return 6
                 if mario_x <= pipe_x and (pipe_x - mario_x) < 45:  # The number 30 is arbitrary; you might need to adjust this
@@ -436,25 +436,51 @@ def make_action(screen, info, step, env, prev_action):
                 next_block_height = next_block[1][1]
                 if (block_y == 224) and (next_block_y == 224):
                     current_x = block_x
-                    next_x = next_block_x
-                    # print(f"{next_x - current_x}")
-                    # print(f"{next_x}")
-                    # print(f"{current_x}")
+                    next_x = next_block_x    
                     # 检查两个块之间的间隔是否大于正常间隔
                     if mario_locations:
                         if (next_x - current_x > 16) and (current_x - mario_locations[0][0][0] < 20):
                             print("jumping over the gap")
                             if (next_x - current_x <= 32):
-                                return 2
+                                return 4
                             if (next_x - current_x > 32):
                                 return 4
-                                
+            #here should to deal with the block4 
+            if block_name == 'block4':
+                # print("trying to overcome the block4")
+                if mario_locations:
+                    # highest_block_y = min(block[0][1] for block in block_locations if block_name == 'block4')  # 查找block4的最高位置
+                    # highest_blocks = [block for block in block_locations if block[0][1] == highest_block_y and block_name == 'block4']  # 找到所有最高位置的block4
+                    # 只考虑 block4 块的最高位置
+                    highest_block_y = min(block[0][1] for block in block_locations if block[2] == 'block4')  
+                    # 找到所有最高位置的 block4 块
+                    highest_blocks = [block for block in block_locations if block[0][1] == highest_block_y and block[2] == 'block4']  
+                    print(highest_block_y)
+                    # print(highest_blocks)
+                    print(highest_blocks[0][0][0])
+                    if (mario_locations[0][0][0] <= highest_blocks[0][0][0]):
+                        if (mario_locations[0][0][1]-block_y >= -5)and (mario_locations[0][0][1]-block_y <= 5):
+                            if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] >= 11) and (block_x - mario_locations[0][0][0] <= 13):
+                                print("going back a little")
+                                return 6
+                            if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] < 50):
+                                print("jump")
+                                return 2
+                    if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 4) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 16):
+                        print("long jump")
+                        return 3
+                    if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 0) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 4):
+                        print("long jump")
+                        return 4
+                    if (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 0) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] > -100):
+                        print("fast run")
+                        return 3
             #for the question block
             if block_name == 'question_block':
                 if mario_locations:
-                    if(mario_locations[0][0][0] < block_x) and (block_x - mario_locations[0][0][0] <= 24):
+                    if(mario_locations[0][0][0] < block_x) and (block_x - mario_locations[0][0][0] <= 24) and block_x - mario_locations[0][0][0] >= 16:
                         print("jump to touch the question block")
-                        return 2
+                        # return 2
                     
 
     
@@ -468,11 +494,16 @@ def make_action(screen, info, step, env, prev_action):
     #     # With a random agent, I found that choosing the same random action
     #     # 10 times in a row leads to slightly better performance than choosing
     #     # a new random action every step.
+   
+    if block_locations:
+        for block in block_locations:
+            block_name = block[2]
+            if block_name == 'block4':
+                print("return 0")
+                return 0
     print("return 3")
-    # if not enemy_locations:
-    #     return 1
     return 3
-
+    
 
 
 
