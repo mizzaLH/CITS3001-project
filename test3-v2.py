@@ -383,26 +383,27 @@ def make_action(screen, info, step, env, prev_action):
             print(enemy_locations)
             enemy_location = enemy[0]
             enemy_x, enemy_y = enemy[0]
-            if mario_locations:
-                mario_location = mario_locations[0][0]
-                print("Printing mario location in if enemy_locations",mario_location)
-                mario_x, mario_y = mario_location
-            # Check if the enemy is in front of Mario and within a certain distance (e.g., 50 pixels)
-            if mario_x < enemy_x and (enemy_x - mario_x) < 50:
-                
-                # Check if the enemy is a high threat
-                if is_high_threat(mario_location,enemy_location):
+            if len(enemy_locations) <= 5:
+                if mario_locations:
+                    mario_location = mario_locations[0][0]
+                    print("Printing mario location in if enemy_locations",mario_location)
+                    mario_x, mario_y = mario_location
+                # Check if the enemy is in front of Mario and within a certain distance (e.g., 50 pixels)
+                if mario_x < enemy_x and (enemy_x - mario_x) < 50:
                     
-                    # Check if it's safe to jump over the enemy
-                    if safe_to_jump_over(mario_location, enemy_location, enemy_locations) and can_jump_over(screen, mario_location,enemy_location):
-                        print("Jumping to the right over an enemy")
-                        return 4  # This corresponds to the "jump right" action in SIMPLE_MOVEMENT
-                    elif not safe_to_jump_over(mario_location, enemy_location, enemy_locations):
-                        print("Jump deemed to be not safe,lets move left",)
-                        return 6
+                    # Check if the enemy is a high threat
+                    if is_high_threat(mario_location,enemy_location):
+                        
+                        # Check if it's safe to jump over the enemy
+                        if safe_to_jump_over(mario_location, enemy_location, enemy_locations) and can_jump_over(screen, mario_location,enemy_location):
+                            print("Jumping to the right over an enemy")
+                            return 4  # This corresponds to the "jump right" action in SIMPLE_MOVEMENT
+                        elif not safe_to_jump_over(mario_location, enemy_location, enemy_locations):
+                            print("Jump deemed to be not safe,lets move left",)
+                            return 6
 
-                    elif not can_jump_over(screen, mario_location,enemy_location):
-                        print("Jumped deemed to not be valid as blocks above")
+                        elif not can_jump_over(screen, mario_location,enemy_location):
+                            print("Jumped deemed to not be valid as blocks above")
             '''if enemy[0][0] < mario_x:
                 continue
             enemy_x = enemy[0][0]  # grabbing the location of the first enemy detected
@@ -437,38 +438,39 @@ def make_action(screen, info, step, env, prev_action):
                 mario_x = mario_locations[0][0][0]  # Mario's x-coordinate
                 distance_to_pipe = pipe_x - mario_x
                 print("Distance to pipe is", distance_to_pipe)
+                if distance_to_pipe >= -40:
 
-                # Check if Mario is on top of the pipe
-                if is_on_top_of_pipe(mario_locations[0], pipe):
-                    print("Mario is on top of the pipe")
-                    action = action_from_pipe_top(pipe, enemy_locations)
-                    print("The action we are returning is", action)
-                    return action
+                    # Check if Mario is on top of the pipe
+                    if is_on_top_of_pipe(mario_locations[0], pipe):
+                        print("Mario is on top of the pipe")
+                        action = action_from_pipe_top(pipe, enemy_locations)
+                        print("The action we are returning is", action)
+                        return action
 
-                # Define the distance 'x' from the pipe where Mario should decide to jump
-                x = 16  # Adjust this value based on your game's physics and behavior
+                    # Define the distance 'x' from the pipe where Mario should decide to jump
+                    x = 16  # Adjust this value based on your game's physics and behavior
 
-                # Mario in open space, running to the right
-                if distance_to_pipe > x + 20:
-                    return 3  # ['right', 'B']
+                    # Mario in open space, running to the right
+                    if distance_to_pipe > x + 20:
+                        return 3  # ['right', 'B']
 
-                # Too close to the pipe, backtrack to distance x
-                if 12 < distance_to_pipe < x:  # 10 is an arbitrary buffer, adjust as needed
-                    return 6  # ['left']
+                    # Too close to the pipe, backtrack to distance x
+                    if 12 < distance_to_pipe < x:  # 10 is an arbitrary buffer, adjust as needed
+                        return 6  # ['left']
 
-                # At distance x, decide whether to jump over or land on the pipe
-                if x <= distance_to_pipe <= x + 20:
-                    if is_safe_to_jump_over_pipe(pipe, enemy_locations):
-                        print("Safe to jump over the pipe at distance", distance_to_pipe)
-                        return 4  # ['right', 'A', 'B']
-                    else:
-                        print("Not safe, attempting to land on the pipe!")
-                        return 2  # ['right', 'A']
+                    # At distance x, decide whether to jump over or land on the pipe
+                    if x <= distance_to_pipe <= x + 20:
+                        if is_safe_to_jump_over_pipe(pipe, enemy_locations):
+                            print("Safe to jump over the pipe at distance", distance_to_pipe)
+                            return 4  # ['right', 'A', 'B']
+                        else:
+                            print("Not safe, attempting to land on the pipe!")
+                            return 2  # ['right', 'A']
 
-                # If Mario is on the pipe, wait until it's safe
-                if mario_x > pipe_x and not is_safe_to_jump_over_pipe(pipe, enemy_locations):
-                    print("Waiting on top of the pipe for safety")
-                    return 0  # ['NOOP']
+                    # If Mario is on the pipe, wait until it's safe
+                    if mario_x > pipe_x and not is_safe_to_jump_over_pipe(pipe, enemy_locations):
+                        print("Waiting on top of the pipe for safety")
+                        return 0  # ['NOOP']
 
 
     if block_locations:
@@ -514,7 +516,7 @@ def make_action(screen, info, step, env, prev_action):
                             if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] >= 11) and (block_x - mario_locations[0][0][0] <= 13):
                                 print("going back a little")
                                 return 6
-                            if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] < 100):
+                            if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] < 115):
                                 print("jump")
                                 return 2
                     if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 4) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 16):
@@ -835,8 +837,8 @@ for step in range(100000):
         action = env.action_space.sample()
     obs, reward, terminated, truncated, info = env.step(action)
     done = terminated or truncated
-    #if done:
-    #    break    #SET TO env.reset() IF WE WANT SIMULATION TO KEEP RUNNING
-    if info['life'] < initial_lives:
-        break  # End the simulation if Mario loses a life
+    if done:
+       env.reset()    #SET TO env.reset() IF WE WANT SIMULATION TO KEEP RUNNING
+    # if info['life'] < initial_lives:
+    #     break  # End the simulation if Mario loses a life
 env.close()
