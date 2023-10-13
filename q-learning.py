@@ -257,22 +257,351 @@ def locate_objects(screen, mario_status):
     object_locations["pipe"] += _locate_pipe(screen)
 
     return object_locations
+#######################################
+#Enemy Helper Functions
+def is_high_threat(mario_locations, enemy_locations, threat_distance=30):
+    """
+    Determines if an enemy is a high threat based on its proximity to Mario.
+
+    Parameters:
+    - mario_location: Tuple containing Mario's (x, y) coordinates.
+    - enemy_location: Tuple containing the enemy's (x, y) coordinates.
+    - threat_distance: The horizontal distance within which an enemy is considered a high threat.
+
+    Returns:
+    - True if the enemy is a high threat. False otherwise.
+    """
+    print(f"mario_locations: {mario_locations}, enemy_locations: {enemy_locations}")
+
+    if mario_locations and enemy_locations:
+        mario_location = mario_locations[0]
+        enemy_location = enemy_locations[0]
+
+        # 从元组中提取x和y坐标
+        mario_x, mario_y = mario_location[0]
+        enemy_x, enemy_y = enemy_location[0]
+
+    # Calculate horizontal and vertical distances between Mario and the enemy
+    horizontal_distance = abs(mario_x - enemy_x)
+    vertical_distance = abs(mario_y - enemy_y)
+
+    # Check if the enemy is within the threat distance horizontally
+    # and is approximately at the same vertical level as Mario.
+    if horizontal_distance < threat_distance and vertical_distance < 20:
+        print("have found an enemy")
+        return True
+
+    return False
+
+def is_enemy_behind_enemy(enemy_locations):
+    """
+    Check if there is another enemy within two blocks behind the first enemy.
+    
+    Parameters:
+    mario_location (tuple): The location of Mario as a tuple (x, y).
+    enemy_locations (list): A list of tuples each containing enemy location and size information.
+    
+    Returns:
+    bool: True if there is another enemy within two blocks behind the first enemy, False otherwise.
+    """
+
+    first_enemy_location = enemy_locations[0] if enemy_locations else None
+
+    if first_enemy_location is None:
+        # 如果没有敌人，返回 False
+        return False
+
+    first_enemy_x, first_enemy_y = first_enemy_location[0]
+
+    # 定义检查区域的范围
+    check_range_start = first_enemy_x + 16  # 一个 block 后的位置
+    check_range_end = first_enemy_x + 32   # 两个 block 后的位置（两个 block 之外）
+
+    # 遍历所有的敌人，检查是否有敌人在指定的范围内
+    for enemy_location in enemy_locations[1:]:  # 跳过第一个敌人
+        enemy_x, enemy_y = enemy_location[0]
+        if check_range_start <= enemy_x <= check_range_end:
+            # 如果找到一个敌人在指定的范围内，返回 True
+            print("it's an enemy behind the first enemy")
+            return True
+
+    # 如果遍历完所有的敌人都没有找到在指定范围内的敌人，返回 False
+    return False
+
+def is_two_enemies_behind_the_second_enemy(enemy_locations):
+    """
+    Check if there are at least two enemies within six blocks behind the second enemy.
+    
+    Parameters:
+    enemy_locations (list): A list of tuples each containing enemy location and size information.
+    
+    Returns:
+    bool: True if there are at least two enemies within six blocks behind the second enemy, False otherwise.
+    """
+
+    # 确保有至少三个敌人（包括第二个敌人）在列表中
+    if len(enemy_locations) < 3:
+        return False
+
+    # 获取第二个敌人的位置
+    second_enemy_x, second_enemy_y = enemy_locations[1][0]
+
+    # 定义检查区域的范围
+    check_range_start = second_enemy_x + 16  # 一个 block 后的位置
+    check_range_end = second_enemy_x + 112  # 七个 block 后的位置（六个 block 之外）
+
+    # 初始化一个计数器来跟踪在指定范围内找到的敌人数量
+    enemies_count = 0
+
+    # 遍历所有的敌人，检查是否有敌人在指定的范围内
+    for enemy_location in enemy_locations[2:]:  # 跳过前两个敌人
+        enemy_x, enemy_y = enemy_location[0]
+        if check_range_start <= enemy_x <= check_range_end:
+            # 如果找到一个敌人在指定的范围内，增加计数器
+            enemies_count += 1
+
+            # 如果找到至少两个敌人，返回 True
+            if enemies_count >= 2:
+                return True
+
+    # 如果遍历完所有的敌人都没有找到至少两个敌人在指定范围内，返回 False
+    return False
+
+def is_pipe(mario_locations, pipe_locations):
+    """
+    Check if there is a pipe in front of Mario.
+    
+    Parameters:
+    mario_locations (tuple): The location of Mario as a tuple (x, y).
+    pipe_locations (list): A list of tuples each containing pipe location and size information.
+    
+    Returns:
+    bool: True if there is a pipe in front of Mario, False otherwise.
+    """
+
+    # 获取 Mario 的 x 和 y 坐标
+    mario_x, mario_y = mario_locations
+
+    for pipe in pipe_locations:
+        pipe_x, pipe_y = pipe[0]
+        pipe_width, pipe_height = pipe[1]
+        
+        # 检查管道是否在 Mario 的前方
+        # 我们可以通过比较 x 坐标来实现这一点
+        # 我们也需要确保 Mario 和管道的 y 坐标相近，以便确保它们在同一水平线上
+        if pipe_x > mario_x and abs(pipe_y - mario_y) < pipe_height and pipe_x - mario_x < 24:
+            return True  # 如果找到了管道，返回 True
+    
+    return False  # 如果遍历完所有的管道都没有找到符合条件的管道，返回 False
+
+
+
+def is_on_top_of_pipe(mario_locations, pipe):
+    """
+    Determines if Mario is on top of the given pipe.
+
+    Parameters:
+    - mario_location: Tuple containing Mario's (x, y) coordinates.
+    - pipe: Tuple containing the pipe's location and dimensions.
+
+    Returns:
+    - True if Mario is on top of the pipe. False otherwise.
+    """
+    if mario_locations:
+        mario_location = mario_locations[0]
+        # 从元组中提取x和y坐标
+        mario_x = mario_location[0][0]
+        mario_y = mario_location[0][1]
+    print("The pipe charectersitxs we are checkig we are on top of are", pipe)
+    pipe_x = pipe[0][0]
+    pipe_y = pipe[0][1]
+    pipe_width = pipe[1][0]
+
+
+    # Check if Mario's x-coordinate is within the horizontal bounds of the pipe
+    if mario_x >= pipe_x and mario_x <= pipe_x + pipe_width:
+        # Check if Mario's y-coordinate is just above the top of the pipe (with a small threshold for error)
+        if abs(mario_y - pipe_y) < 5:  # 5 is an arbitrary threshold; adjust as needed
+            return True
+
+    return False
+
+def is_gap(mario_locations, block_locations):
+    """
+    Check if there is a gap in the ground in front of Mario.
+    
+    Parameters:
+    mario_locations (tuple): The location of Mario as a tuple (x, y).
+    block_locations (list): A list of tuples each containing block location, size, and name information.
+    
+    Returns:
+    bool: True if there is a gap in front of Mario, False otherwise.
+    """
+    
+    # 获取马里奥的 x 坐标
+    if mario_locations:
+        mario_location = mario_locations[0]
+        # 从元组中提取x和y坐标
+        mario_x, mario_y = mario_location[0]
+
+    # 初始化前一个 block2 的 x 坐标为 None，以便我们可以在循环中更新它
+    prev_block2_x = None
+
+    # 遍历所有的 block，查找名为 'block2' 的 block
+    for block in block_locations:
+        block_x = block[0][0]
+        block_y = block[0][1]
+        block_name = block[2]
+
+        if block_name == 'block2' and block_y == 224:
+            # 如果这是第一个找到的 'block2' block，更新 prev_block2_x 并继续
+            if prev_block2_x is None:
+                prev_block2_x = block_x
+                continue
+
+            # 计算当前 'block2' block 和前一个 'block2' block 之间的 x 坐标差
+            x_gap = block_x - prev_block2_x
+
+            # 检查 x 坐标差是否大于 16，并且这个 gap 是否在马里奥的前方
+            if x_gap > 16 and mario_x + 24 >= prev_block2_x + 16 and mario_x <= prev_block2_x:
+                print("在马里奥前方发现了一个 gap")
+                return True  # 在马里奥前方发现了一个 gap
+
+            # 更新 prev_block2_x 为当前 'block2' block 的 x 坐标，以便下一次迭代
+            prev_block2_x = block_x
+
+    # 没有在马里奥前方发现 gap，返回 False
+    return False
+
+def is_block4(mario_locations, block_locations):
+    """
+    检查 Mario 前方 0.5 格内是否有 block4 障碍物。
+
+    参数:
+    mario_locations (tuple): Mario 的位置信息。
+    block_locations (list): 所有 block 的位置信息列表。
+
+    返回:
+    bool: 如果前方 0.5 格内有 block4，则返回 True，否则返回 False。
+    """
+
+    mario_x, mario_y = mario_locations[0][0]
+
+    # 计算检查区域
+    check_range_start = mario_x
+    check_range_end = mario_x + 15  # 0.5格宽度为8像素
+
+    for block in block_locations:
+        block_x = block[0][0]
+        block_y = block[0][1]
+        block_name = block[2]
+
+        if block_name == 'block4' and check_range_start <= block_x <= check_range_end:
+            return True  # 在检查区域内找到 block4
+
+    return False  # 没有在检查区域内找到 block4
+
+
+def is_on_the_top_of_block4(mario_locations, block_locations):
+    """
+    检查 Mario 是否站在最顶端的 block4 砖块上。
+
+    参数:
+    mario_locations (tuple): Mario 的位置信息。
+    block_locations (list): 所有 block 的位置信息列表。
+
+    返回:
+    bool: 如果 Mario 站在最顶端的 block4 砖块上，则返回 True，否则返回 False。
+    """
+
+    if not is_block4(mario_locations, block_locations):
+        # 如果前方没有 block4，则检查 Mario 是否站在 block4 上
+        mario_x, mario_y = mario_locations[0][0]
+
+        for block in block_locations:
+            block_x, block_y = block[0]
+            block_name = block[2]
+
+            if block_name == 'block4' and block_y >= mario_y + 16:  # 假设 Mario 的高度为16像素
+                return True  # Mario 站在 block4 上
+
+    return False  # Mario 没有站在 block4 上或前方有 block4
+
+
 
 ################################################################################
 # GETTING INFORMATION AND CHOOSING AN ACTION
 def get_state_index(object_locations):
-    enemy_in_front = any(
-        (enemy[0][0] > mario[0][0] and abs(enemy[0][1] - mario[0][1]) < 20)
-        for enemy in object_locations["enemy"]
-        for mario in object_locations["mario"]
-    )
-    pipe_in_front = any(
-        (pipe[0][0] > mario[0][0] and abs(pipe[0][1] - mario[0][1]) < 20)
-        for pipe in object_locations["pipe"]
-        for mario in object_locations["mario"]
-    )
-    # 根据二进制编码计算状态索引
-    return int(f"{int(enemy_in_front)}{int(pipe_in_front)}", 2)
+    mario_locations = object_locations["mario"]  
+    enemy_locations = object_locations["enemy"]
+    block_locations = object_locations["block"]
+    pipe_locations = object_locations["pipe"]
+    
+    # mario_x, mario_y = mario_locations
+    # enemy_x, enemy_y = enemy_locations
+    # we can define state nothing for number 20
+    # for state(1,2,3) for dealing with the enemies | State 1 only has one enemy in 6 blocks (assume)
+    # see if there is a enemy in front of Mario
+    if mario_locations:
+        if enemy_locations:
+            if is_high_threat(mario_locations, enemy_locations): 
+                # see if the enemy is the only one, so we should detect if there any other enemy after the first one in 6 blocks
+                if is_enemy_behind_enemy(enemy_locations):
+                    # if not then we return the state 1
+                    # if yes then we will find out if it's the state of two enemies
+                        # if yes then we return the state 2
+                        # if not then we will find out if it's the state of four enemies
+                            #if yes then we return the state 3
+                            #if not, it's impossible not usually, then we return nothing and print out here's a bug
+                    if is_two_enemies_behind_the_second_enemy(enemy_locations):
+                        print("state 3")
+                        return 3
+                    print("state 2")
+                    return 2
+                print("state 1")        
+                return 1
+        
+        # see if the Mario is standing on the top pipe
+        if pipe_locations:
+            for pipe in pipe_locations:
+                pipe_x = pipe[0][0]
+            if is_on_top_of_pipe(mario_locations,pipe):
+                return 5
+            if is_pipe:
+                return 4
+            # if yes then we return state 5
+        # see if there is a pipe in front of Mario, and the distance to pipe should be closed, maybe 1 or 1.5 blocks:
+            # if yes then we return state 4
+
+        # see if there is a gap in front of Mario, and the distance maybe 1 or 1.5 block
+        if is_gap(mario_locations, block_locations):
+            return 6
+            # if yes then we return state 6
+
+        # see if there is a block 4 barrier in front of Mario:
+        if is_block4(mario_locations, block_locations):
+            return 7
+            # if yes then we return state 7
+        
+        # see if Mario stand on the edge block of block 4
+        if is_on_the_top_of_block4(mario_locations, block_locations):
+            return 8
+            # if yes then we return state 8
+
+        
+    return 0
+    # enemy_in_front = any(
+    #     (enemy[0][0] > mario[0][0] and abs(enemy[0][1] - mario[0][1]) < 20)
+    #     for enemy in object_locations["enemy"]
+    #     for mario in object_locations["mario"]
+    # )
+    # pipe_in_front = any(
+    #     (pipe[0][0] > mario[0][0] and abs(pipe[0][1] - mario[0][1]) < 20)
+    #     for pipe in object_locations["pipe"]
+    #     for mario in object_locations["mario"]
+    # )
+    # # 根据二进制编码计算状态索引
+    # return int(f"{int(enemy_in_front)}{int(pipe_in_front)}", 2)
 
 
 def make_action(screen, info, step, env, prev_action):
@@ -381,9 +710,13 @@ def make_action(screen, info, step, env, prev_action):
     #              action = 1 means press 'right' button
     #              action = 2 means press 'right' and 'A' buttons at the same time
     current_state_index = get_state_index(object_locations)  # 更新当前状态索引
+    print("current_state_index")
+    print(current_state_index)
     if np.random.uniform(0, 1) < exploration_rate:
         current_action = env.action_space.sample()  # 随机选择动作
     else:
+        print("choose action by")
+        print(current_action)
         current_action = np.argmax(q_table[current_state_index, :])  # 选择Q值最高的动作
     return current_action
 
@@ -402,9 +735,9 @@ else:
     # Initialize a new Q-table
     q_table = np.zeros((state_space_size, action_space_size))
 
-learning_rate = 0.1
+learning_rate = 0.01
 discount_factor = 0.99
-exploration_rate = 1
+exploration_rate = 0.5
 max_exploration_rate = 1
 min_exploration_rate = 0.1
 exploration_decay_rate = 0.01
@@ -428,6 +761,10 @@ for step in range(100000):
     next_state_index = get_state_index(object_locations)  # 根据新的物体位置计算下一个状态的索引
 
     # 新代码: 如果这不是第一步，更新Q-table
+    # redefine reward + = new reward 
+    # and punishment
+
+
     if current_state_index is not None and current_action is not None:
         q_table[current_state_index, current_action] = q_table[current_state_index, current_action] * (1 - learning_rate) + \
             learning_rate * (reward + discount_factor * np.max(q_table[next_state_index, :]))
