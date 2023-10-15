@@ -5,6 +5,7 @@ import cv2 as cv
 import numpy as np
 import string
 import os
+import argparse
 # code for locating objects on the screen in super mario bros
 # by Lauren Gee
 
@@ -259,7 +260,7 @@ def locate_objects(screen, mario_status):
     return object_locations
 #######################################
 #Enemy Helper Functions
-def is_high_threat(mario_locations, enemy_locations, threat_distance=30):
+def is_high_threat(mario_locations, enemy_locations, threat_distance=60):
     """
     Determines if an enemy is a high threat based on its proximity to Mario.
 
@@ -271,7 +272,7 @@ def is_high_threat(mario_locations, enemy_locations, threat_distance=30):
     Returns:
     - True if the enemy is a high threat. False otherwise.
     """
-    print(f"mario_locations: {mario_locations}, enemy_locations: {enemy_locations}")
+    # print(f"mario_locations: {mario_locations}, enemy_locations: {enemy_locations}")
 
     if mario_locations and enemy_locations:
         mario_location = mario_locations[0]
@@ -287,7 +288,7 @@ def is_high_threat(mario_locations, enemy_locations, threat_distance=30):
 
     # Check if the enemy is within the threat distance horizontally
     # and is approximately at the same vertical level as Mario.
-    if horizontal_distance < threat_distance and vertical_distance < 20:
+    if horizontal_distance < threat_distance and vertical_distance < 24:
         print("have found an enemy")
         return True
 
@@ -380,7 +381,7 @@ def is_pipe(mario_locations, pipe_locations):
     """
 
     # 获取 Mario 的 x 和 y 坐标
-    mario_x, mario_y = mario_locations
+    mario_x, mario_y = mario_locations[0][0]
 
     for pipe in pipe_locations:
         pipe_x, pipe_y = pipe[0]
@@ -389,7 +390,7 @@ def is_pipe(mario_locations, pipe_locations):
         # 检查管道是否在 Mario 的前方
         # 我们可以通过比较 x 坐标来实现这一点
         # 我们也需要确保 Mario 和管道的 y 坐标相近，以便确保它们在同一水平线上
-        if pipe_x > mario_x and abs(pipe_y - mario_y) < pipe_height and pipe_x - mario_x < 24:
+        if (pipe_x > mario_x) and (abs(pipe_y - mario_y) < pipe_height) and ((pipe_x - mario_x) <= 24):
             return True  # 如果找到了管道，返回 True
     
     return False  # 如果遍历完所有的管道都没有找到符合条件的管道，返回 False
@@ -412,7 +413,7 @@ def is_on_top_of_pipe(mario_locations, pipe):
         # 从元组中提取x和y坐标
         mario_x = mario_location[0][0]
         mario_y = mario_location[0][1]
-    print("The pipe charectersitxs we are checkig we are on top of are", pipe)
+    # print("The pipe charectersitxs we are checkig we are on top of are", pipe)
     pipe_x = pipe[0][0]
     pipe_y = pipe[0][1]
     pipe_width = pipe[1][0]
@@ -463,7 +464,7 @@ def is_gap(mario_locations, block_locations):
             x_gap = block_x - prev_block2_x
 
             # 检查 x 坐标差是否大于 16，并且这个 gap 是否在马里奥的前方
-            if x_gap > 16 and mario_x + 24 >= prev_block2_x + 16 and mario_x <= prev_block2_x:
+            if x_gap > 16 and mario_x + 16 >= prev_block2_x and mario_x <= prev_block2_x:
                 print("在马里奥前方发现了一个 gap")
                 return True  # 在马里奥前方发现了一个 gap
 
@@ -567,7 +568,7 @@ def get_state_index(object_locations):
                 pipe_x = pipe[0][0]
             if is_on_top_of_pipe(mario_locations,pipe):
                 return 5
-            if is_pipe:
+            if is_pipe(mario_locations,pipe_locations):
                 return 4
             # if yes then we return state 5
         # see if there is a pipe in front of Mario, and the distance to pipe should be closed, maybe 1 or 1.5 blocks:
@@ -716,14 +717,24 @@ def make_action(screen, info, step, env, prev_action):
         current_action = env.action_space.sample()  # 随机选择动作
     else:
         print("choose action by")
-        print(current_action)
-        current_action = np.argmax(q_table[current_state_index, :])  # 选择Q值最高的动作
+        
+        current_action = np.argmax(q_table[current_state_index, :]) 
+        
     return current_action
 
 ################################################################################
 
 env = gym.make("SuperMarioBros-v0", apply_api_compatibility=True, render_mode="human")
 env = JoypadSpace(env, COMPLEX_MOVEMENT)
+
+
+# 解析命令行参数
+parser = argparse.ArgumentParser(description='Train or run a Q-Learning agent for Super Mario Bros.')
+parser.add_argument('mode', type=int, choices=[0, 1], help='0 for training, 1 for running')
+args = parser.parse_args()
+
+# 检查是否要训练或运行
+is_training = args.mode == 0
 
 state_space_size = 10  # 根据你的状态空间大小填写
 action_space_size = 12  # 从你的动作集合中获得
@@ -735,9 +746,12 @@ else:
     # Initialize a new Q-table
     q_table = np.zeros((state_space_size, action_space_size))
 
-learning_rate = 0.01
+if is_training:
+    learning_rate = 0.01
+else:
+    learning_rate = 0
 discount_factor = 0.99
-exploration_rate = 0.5
+exploration_rate = 0.15
 max_exploration_rate = 1
 min_exploration_rate = 0.1
 exploration_decay_rate = 0.01
@@ -748,27 +762,54 @@ current_action = None
 obs = None
 done = True
 env.reset()
-for step in range(100000):
+
+# 在主循环外部初始化 previous_life 和文件对象
+previous_life = 2  # Mario 的初始生命值
+previous_info = None  # 初始时没有上一个info数据
+file_object = open('mario_info.txt', 'w')  # 以写入模式打开文件
+
+
+for step in range(1000000):
     if obs is not None:
         action = make_action(obs, info, step, env, action)
+        print(current_action)  # 选择Q值最高的动作
     else:
         action = env.action_space.sample()
+        print(current_action)  # 选择Q值最高的动作
     obs, reward, terminated, truncated, info = env.step(action)
     print("reward")
     print(reward)
+    if terminated or truncated:
+        # 如果游戏结束或Mario死亡，记录上一步的信息
+        if previous_info is not None:
+            info_str = str(previous_info) + '\n'  # 将previous_info字典转换为字符串并添加换行符
+            file_object.write(info_str)  # 将字符串写入文件
+            file_object.flush()  # 立即刷新缓冲区
      # 新代码: 获取下一个状态的索引
+    # 检查生命值是否有变化
+    current_life = info['life']
+    if (previous_life == 2 and current_life == 1) or \
+       (previous_life == 1 and current_life == 0) or \
+       (previous_life == 0 and current_life == 2):
+        # 如果生命值减少或从 0 变为 2，记录信息
+        info_str = str(previous_info) + '\n'  # 将 previous_info 字典转换为字符串并添加换行符
+        file_object.write(info_str)  # 将字符串写入文件
+    previous_life = current_life  # 更新 previous_life 以备下次检查
+    previous_info = info  # 更新 previous_info 以备下次检查
+
     object_locations = locate_objects(obs, info["status"])  # 获取物体的新位置
     next_state_index = get_state_index(object_locations)  # 根据新的物体位置计算下一个状态的索引
 
     # 新代码: 如果这不是第一步，更新Q-table
     # redefine reward + = new reward 
     # and punishment
-
+    if current_state_index != next_state_index:
+        reward = reward + 3
 
     if current_state_index is not None and current_action is not None:
         q_table[current_state_index, current_action] = q_table[current_state_index, current_action] * (1 - learning_rate) + \
             learning_rate * (reward + discount_factor * np.max(q_table[next_state_index, :]))
-    print(q_table)
+    
     np.save('q_table.npy', q_table)
 
     done = terminated or truncated
