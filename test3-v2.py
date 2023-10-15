@@ -393,8 +393,8 @@ def make_action(screen, info, step, env, prev_action):
 
     if stay_still_frames > 0:
         stay_still_frames -= 1
-        print("stay still =", stay_still_frames)
-        print("Attempting to stay still")
+        #print("stay still =", stay_still_frames)
+        #print("Attempting to stay still")
         return 6  # Stay still
     else: 
         #print("Inside of else")    
@@ -461,12 +461,12 @@ def make_action(screen, info, step, env, prev_action):
                     if prev_action == 2 or prev_action == 4:
 
                         if enemy_x > mario_x and 15 > (enemy_x - mario_x):
-                            print("Currently jumping - trying to move right to land on goomba")
-                            print("Action = 6")
+                            #print("Currently jumping - trying to move right to land on goomba")
+                            #print("Action = 6")
                             return 1
                         elif enemy_x < mario_x and 15 > (mario_x - enemy_x):
-                            print("Currently jumping - trying to move left")
-                            print("Action = 6")
+                            #print("Currently jumping - trying to move left")
+                            #print("Action = 6")
                             return 6
                     # After potentially hitting an enemy
                     
@@ -593,7 +593,7 @@ def make_action(screen, info, step, env, prev_action):
                                     return 4
                 #here should to deal with the block4 
                 if block_name == 'block4':
-                    print("Dealing with block4 now")
+                    #print("Block 4 is on our screen")
                     #print(enemy_locations)
                     # print("trying to overcome the block4")
                     if mario_locations:
@@ -607,23 +607,23 @@ def make_action(screen, info, step, env, prev_action):
                         # print(highest_blocks)
                         #print(highest_blocks[0][0][0])
                         if (mario_locations[0][0][0] <= highest_blocks[0][0][0]):
-                            print("Dealing with not highest block")
+                            #print("Dealing with not highest block")
                             if (mario_locations[0][0][1]-block_y >= -5)and (mario_locations[0][0][1]-block_y <= 5):
                                 if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] >= 11) and (block_x - mario_locations[0][0][0] <= 13):
-                                    print("going back a little")
+                                    #print("going back a little")
                                     return 6
                                 if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] < 115):
-                                    print("jump")
+                                    #print("jump")
                                     return 2
                         print("We are now on the highest block")
                         if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 4) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 16):
-                            print("fast run")
+                            #print("fast run")
                             return 3
                         if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 0) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 4):
-                            print("long jump")
+                            #print("long jump")
                             return 4
                         if (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 0) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] > -100):
-                            print("fast run")
+                            #print("fast run")
                             return 3
                 #for the question block
                 '''
@@ -695,7 +695,7 @@ def make_action(screen, info, step, env, prev_action):
                         return 1
 
         while hitting_block == True:
-            print("Mario us trying to hit block, dont move")
+            #print("Mario us trying to hit block, dont move")
             return 0
         #print("return 3")
         return 3
@@ -976,9 +976,9 @@ def action_from_pipe_top(pipe, enemy_locations):
     pipe_width, pipe_height = pipe[1]
 
     # Define a region just below the pipe where we'll check for enemies
-    danger_zone = (pipe_x, pipe_y + pipe_height -5 , pipe_width + 6 * BLOCK_SIZE, 3 * BLOCK_SIZE)  # 20 is an arbitrary height; adjust as needed
+    danger_zone = (pipe_x, pipe_y + pipe_height -5 , pipe_width + 3 * BLOCK_SIZE, 3 * BLOCK_SIZE)  # 20 is an arbitrary height; adjust as needed
     # Define a region 4 to 7 blocks away from the bottom of the pipe
-    long_jump_zone = (pipe_x + pipe_width + 4 * BLOCK_SIZE, pipe_y + pipe_height - 5 , pipe_width + 7 * BLOCK_SIZE, 3 * BLOCK_SIZE)
+    long_jump_zone = (pipe_x + pipe_width + 3 * BLOCK_SIZE, pipe_y + pipe_height - 5 , pipe_width + 5 * BLOCK_SIZE, 3 * BLOCK_SIZE)
 
     danger_detected = False
     long_jump_danger_detected = False
@@ -1001,7 +1001,6 @@ def action_from_pipe_top(pipe, enemy_locations):
     for enemy in enemy_locations:
         enemy_x, enemy_y = enemy[0]
         enemy_width, enemy_height = enemy[1]
-
         if (enemy_x + enemy_width > danger_zone[0] and enemy_x < danger_zone[0] + danger_zone[2] and
             enemy_y + enemy_height > danger_zone[1] and enemy_y < danger_zone[1] + danger_zone[3]):
             danger_detected = True
@@ -1011,13 +1010,13 @@ def action_from_pipe_top(pipe, enemy_locations):
             long_jump_danger_detected = True
 
     if danger_detected and not long_jump_danger_detected:
-        print("Enemy close, jumping over")
+        #print("Enemy close, jumping over")
         return 4  # Long jump
     elif danger_detected and long_jump_danger_detected:
-        print("Not safe to jump, waiting")
+        #print("Not safe to jump, waiting")
         return 0  # Wait
     else:
-        print("walking off")
+        #print("walking off")
         return 1  # Move right
 
 
@@ -1101,6 +1100,7 @@ def is_block_close(mario_location, block_location, block_distance=32):
 
 # Check if Mario is close to a block4 type
 def is_close_to_block4(mario_location, block_locations):
+    is_close = False
     for block in block_locations:
         block_name = block[2]
         block_x, block_y = block[0]
@@ -1108,8 +1108,9 @@ def is_close_to_block4(mario_location, block_locations):
 
         # Assuming each block's width is equivalent to 1 unit/block
         if block_name == 'block4' and abs(block_x - mario_x) < 3:
-            return True
-    return False
+            is_close = True
+        else: is_close = False
+    return is_close
 
 
 ################################################################################
@@ -1120,16 +1121,38 @@ obs = None
 done = True
 env.reset()
 initial_lives = 2
+
+# 在主循环外部初始化 previous_life 和文件对象
+previous_life = 2  # Mario 的初始生命值
+previous_info = None  # 初始时没有上一个info数据
+file_object = open('mario_info.txt', 'w')  # 以写入模式打开文件
+
 for step in range(100000):
     if obs is not None:
         action = make_action(obs, info, step, env, action)
     else:
         action = env.action_space.sample()
     obs, reward, terminated, truncated, info = env.step(action)
-    done = terminated or truncated
+    if terminated or truncated:
+        # 如果游戏结束或Mario死亡，记录上一步的信息
+        if previous_info is not None:
+            info_str = str(previous_info) + '\n'  # 将previous_info字典转换为字符串并添加换行符
+            file_object.write(info_str)  # 将字符串写入文件
+            file_object.flush()  # 立即刷新缓冲区
+     # 新代码: 获取下一个状态的索引
+    # 检查生命值是否有变化
+    current_life = info['life']
+    if (previous_life == 2 and current_life == 1) or \
+       (previous_life == 1 and current_life == 0) or \
+       (previous_life == 0 and current_life == 2):
+        # 如果生命值减少或从 0 变为 2，记录信息
+        info_str = str(previous_info) + '\n'  # 将 previous_info 字典转换为字符串并添加换行符
+        file_object.write(info_str)  # 将字符串写入文件
+    previous_life = current_life  # 更新 previous_life 以备下次检查
+    previous_info = info  # 更新 previous_info 以备下次检查
 
-    #if done:
-    #    break    #SET TO env.reset() IF WE WANT SIMULATION TO KEEP RUNNING
-    if info['life'] < initial_lives:
-        break  # End the simulation if Mario loses a life
+
+    done = terminated or truncated
+    if done:
+        env.reset() 
 env.close()
