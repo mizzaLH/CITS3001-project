@@ -15,7 +15,7 @@ import string
 
 # change these values if you want more/less printing
 PRINT_GRID      = False
-PRINT_LOCATIONS = True
+PRINT_LOCATIONS = False
 
 # If printing the grid doesn't display in an understandable way, change the
 # settings of your terminal (or anaconda prompt) to have a smaller font size,
@@ -259,8 +259,22 @@ def locate_objects(screen, mario_status):
 ################################################################################
 # GETTING INFORMATION AND CHOOSING AN ACTION
 
+BLOCK_SIZE = 16
+hitting_block = False
+prev_score = 0
+prev_coins_collected = 0
+stay_still_frames = 0
+consecutive_enemies_jumped = 0
 def make_action(screen, info, step, env, prev_action):
+    global prev_score
+    global hitting_block 
+    global prev_coins_collected
+    global stay_still_frames
+    global consecutive_enemies_jumped
+    coins_collected = info['coins']
+    current_score = info['score']
     mario_status = info["status"]
+    
     object_locations = locate_objects(screen, mario_status)
 
     # You probably don't want to print everything I am printing when you run
@@ -377,212 +391,339 @@ def make_action(screen, info, step, env, prev_action):
     #         if first_enemy_location[0] > mario_location[0] - 18:
     #             return 2  # This corresponds to the "right jump" action in SIMPLE_MOVEMENT
 
-    if enemy_locations:
-        # print("##############################################node16") 
-        for enemy in enemy_locations:
-            print(enemy_locations)
-            enemy_location = enemy[0]
-            enemy_x, enemy_y = enemy_location
-            if mario_locations:
-                mario_location = mario_locations[0][0]
-                print("Printing mario location in if enemy_locations",mario_location)
-                mario_x, mario_y = mario_location
-            # Check if the enemy is in front of Mario and within a certain distance (e.g., 50 pixels)
-            if prev_action == 2 or prev_action == 4:
-
-                if enemy_x > mario_x and 15 > (enemy_x - mario_x):
-                    print("Currently jumping - trying to move right to land on goomba")
-                    print("Action = 6")
-                    return 1
-                elif enemy_x < mario_x and 15 > (mario_x - enemy_x):
-                    print("Currently jumping - trying to move left")
-                    print("Action = 6")
-                    return 6
-            if mario_x < enemy_x and (enemy_x - mario_x) < 50:
-                
-                # Check if the enemy is a high threat
-                if is_high_threat(mario_location,enemy_location):
-                    
-                    # Check if it's safe to jump over the enemy
-                    if safe_to_jump_over(mario_location, enemy_location, enemy_locations) and can_jump_over(screen, mario_location,enemy_location):
-                        print("Jumping to the right over an enemy")
-                        return 4  # This corresponds to the "jump right" action in SIMPLE_MOVEMENT
-                    elif not safe_to_jump_over(mario_location, enemy_location, enemy_locations):
-                        print("Jump deemed to be not safe,lets move left",)
-                        return 6
-                    elif not can_jump_over(screen, mario_location,enemy_location):
-                        print("Jumped deemed to not be valid as blocks above")
-            '''if enemy[0][0] < mario_x:
-                continue
-            enemy_x = enemy[0][0]  # grabbing the location of the first enemy detected
-        # If Mario is found, use its location. If not, it's safer not to jump.
-            if mario_locations:
-                mario_location = mario_locations[0][0] 
-                # Check if the first enemy is to the right of Mario
-                if enemy_x - mario_location[0] < 50 and enemy_x - mario_location[0] > 0:
-                    if mario_location[1] > 190:
-                        if enemy_x - mario_location[0] < 17:
-                            print("wanghuizou")
-                            return 9
-                        if enemy_x - mario_location[0] > 20:
-                            print("wotiaole")
-                            return 4 
-                    # if (mario_location[1] < 160) and (mario_location[1] > 130):
-                    #     if enemy_x - mario_location[0] < 20:
-                    #         print("aiming the enemies")
-                    #         return 3
-                    #     if mario_location[0] - enemy_x < 20:
-                    #         print("aiming the enemies")
-                    #         return 8
-                    
-                    # print("wotiaole")
-                    # return 2  # This corresponds to the "right jump" action in SIMPLE_MOVEMENT
-            '''
-    if pipe_locations:
-        for pipe in pipe_locations:
-            pipe_x = pipe[0][0]
+    if stay_still_frames > 0:
+        stay_still_frames -= 1
+        print("stay still =", stay_still_frames)
+        print("Attempting to stay still")
+        return 6  # Stay still
+    else: 
+        #print("Inside of else")    
             
-            if mario_locations:
-                mario_x = mario_locations[0][0][0]  # Mario's x-coordinate
-                distance_to_pipe = pipe_x - mario_x
-                print("Distance to pipe is", distance_to_pipe)
-                if distance_to_pipe >= -40:
+        if not is_close_to_block4(mario_locations[0][0], block_locations):
+            if enemy_locations:
+                if mario_locations:  # Assuming you have this line somewhere in your code to get Mario's current location
+                    mario_location = mario_locations[0][0]
 
-                    # Check if Mario is on top of the pipe
-                    if is_on_top_of_pipe(mario_locations[0], pipe):
-                        print("Mario is on top of the pipe")
-                        action = action_from_pipe_top(pipe, enemy_locations)
-                        print("The action we are returning is", action)
-                        return action
-
-                    # Define the distance 'x' from the pipe where Mario should decide to jump
-                    x = 16  # Adjust this value based on your game's physics and behavior
-
-                    # Mario in open space, running to the right
-                    if distance_to_pipe > x + 20:
-                        return 3  # ['right', 'B']
-
-                    # Too close to the pipe, backtrack to distance x
-                    if 12 < distance_to_pipe < x:  # 10 is an arbitrary buffer, adjust as needed
-                        return 6  # ['left']
-
-                    # At distance x, decide whether to jump over or land on the pipe
-                    if x <= distance_to_pipe <= x + 20:
-                        if is_safe_to_jump_over_pipe(pipe, enemy_locations):
-                            print("Safe to jump over the pipe at distance", distance_to_pipe)
-                            return 4  # ['right', 'A', 'B']
+                    if is_mario_on_ground(mario_location):
+                        consecutive_enemies_jumped = 0
+                #print("##############################################node16") 
+                score_from_coins = (coins_collected - prev_coins_collected) * 200
+                score_without_coins = current_score - prev_score - score_from_coins
+                if score_without_coins == 100:
+                    consecutive_enemies_jumped += 1
+                elif score_without_coins == 200 and consecutive_enemies_jumped == 1:
+                    consecutive_enemies_jumped += 1
+                else:
+                    consecutive_enemies_jumped = 0
+            #$print("Consec enemies jumped",consecutive_enemies_jumped)
+                if consecutive_enemies_jumped > 0:
+                    #print()
+                    prev_score = current_score
+                    prev_coins_collected = coins_collected
+                    mario_location = mario_locations[0][0]
+                    if is_enemy_close(mario_location, enemy_locations):
+                        #print("Enemy close by after hitting one. Staying still.")
+                        stay_still_frames = 20
+                        #return 0  # Stay still
+                    else:
+                        #print("No enemy close by after hitting one. Moving right.")
+                        return 1  # Move right
+                '''
+                print("Score from coins =", score_from_coins)
+                print("Current score =", current_score)
+                print("Previous score =", prev_score)
+                print("Coins collected =", coins_collected)
+                print("Previous coins collected =", prev_coins_collected)
+                if current_score - prev_score - score_from_coins == 100:
+                        prev_score = current_score
+                        prev_coins_collected = coins_collected
+                        print("current score inside if",current_score)
+                        print("previous core inside loop", prev_score)
+                        mario_location = mario_locations[0][0]
+                        if is_enemy_close(mario_location, enemy_locations):
+                            print("Enemy close by after hitting one. Staying still.")
+                            stay_still_frames = 5
+                            return 0  # Stay still
                         else:
-                            print("Not safe, attempting to land on the pipe!")
-                            return 2  # ['right', 'A']
+                            print("No enemy close by after hitting one. Moving right.")
+                            return 1  # Move right
+                '''
 
-                    # If Mario is on the pipe, wait until it's safe
-                    if mario_x > pipe_x and not is_safe_to_jump_over_pipe(pipe, enemy_locations):
-                        print("Waiting on top of the pipe for safety")
-                        return 0  # ['NOOP']
-
-
-    if block_locations:
-        for index, block in enumerate(block_locations):
-            # 获取当前块的X和Y坐标以及高度
-            block_x = block[0][0]
-            block_y = block[0][1]
-            block_height = block[1][1]
-            block_width = block[1][0]
-            block_name = block[2]
-            if index + 1 < len(block_locations):
-                # 获取下一个块的值
-                next_block = block_locations[index + 1]
-                next_block_x = next_block[0][0]
-                next_block_y = next_block[0][1]
-                next_block_height = next_block[1][1]
-                if (block_y == 224) and (next_block_y == 224):
-                    current_x = block_x
-                    next_x = next_block_x    
-                    # 检查两个块之间的间隔是否大于正常间隔
+                for enemy in enemy_locations:
+                    #print(enemy_locations)
+                    enemy_location = enemy[0]
+                    enemy_x, enemy_y = enemy_location
                     if mario_locations:
-                        if (next_x - current_x > 16) and (current_x - mario_locations[0][0][0] < 20):
-                            print("jumping over the gap")
-                            if (next_x - current_x <= 32):
-                                return 4
-                            if (next_x - current_x > 32):
-                                return 4
-            #here should to deal with the block4 
-            if block_name == 'block4':
-                # print("trying to overcome the block4")
-                if mario_locations:
-                    # highest_block_y = min(block[0][1] for block in block_locations if block_name == 'block4')  # 查找block4的最高位置
-                    # highest_blocks = [block for block in block_locations if block[0][1] == highest_block_y and block_name == 'block4']  # 找到所有最高位置的block4
-                    # 只考虑 block4 块的最高位置
-                    highest_block_y = min(block[0][1] for block in block_locations if block[2] == 'block4')  
-                    # 找到所有最高位置的 block4 块
-                    highest_blocks = [block for block in block_locations if block[0][1] == highest_block_y and block[2] == 'block4']  
-                    print(highest_block_y)
-                    # print(highest_blocks)
-                    print(highest_blocks[0][0][0])
-                    if (mario_locations[0][0][0] <= highest_blocks[0][0][0]):
-                        if (mario_locations[0][0][1]-block_y >= -5)and (mario_locations[0][0][1]-block_y <= 5):
-                            if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] >= 11) and (block_x - mario_locations[0][0][0] <= 13):
-                                print("going back a little")
-                                return 6
-                            if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] < 115):
-                                print("jump")
-                                return 2
-                    if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 4) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 16):
-                        print("fast run")
-                        return 3
-                    if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 0) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 4):
-                        print("long jump")
-                        return 4
-                    if (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 0) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] > -100):
-                        print("fast run")
-                        return 3
-            #for the question block
-            if block_name == 'question_block':
-                if mario_locations:
-                    if(mario_locations[0][0][0] < block_x) and (block_x - mario_locations[0][0][0] <= 24) and block_x - mario_locations[0][0][0] >= 16:
-                        print("jump to touch the question block")
-                        # return 2
+                        mario_location = mario_locations[0][0]
+                        #print("Printing mario location in if enemy_locations",mario_location)
+                        mario_x, mario_y = mario_location
+                    # Check if the enemy is in front of Mario and within a certain distance (e.g., 50 pixels)
+                    if prev_action == 2 or prev_action == 4:
+
+                        if enemy_x > mario_x and 15 > (enemy_x - mario_x):
+                            print("Currently jumping - trying to move right to land on goomba")
+                            print("Action = 6")
+                            return 1
+                        elif enemy_x < mario_x and 15 > (mario_x - enemy_x):
+                            print("Currently jumping - trying to move left")
+                            print("Action = 6")
+                            return 6
+                    # After potentially hitting an enemy
                     
+            
+                        
+                    if mario_x < enemy_x and (enemy_x - mario_x) < 32:
+                        
+                        # Check if the enemy is a high threat
+                        if is_high_threat(mario_location,enemy_location):
+                            
+                            # Check if it's safe to jump over the enemy
+                            if safe_to_jump_over(mario_location, enemy_location, enemy_locations) and can_jump_over(screen, mario_location,enemy_location):
+                                #print("Jumping to the right over an enemy")
+                                return 4  # This corresponds to the "jump right" action in SIMPLE_MOVEMENT
+                            elif not safe_to_jump_over(mario_location, enemy_location, enemy_locations):
+                                #print("Jump deemed to be not safe,lets move left",)
+                                return 6
+                            elif not can_jump_over(screen, mario_location,enemy_location):
+                                #print("Jumped deemed to not be valid as blocks above")
+                                return 3
+                            
+                    if mario_x > enemy_x and (mario_x - enemy_x) < 16:
+                                print("Jumping left to avoid enemy")
+                                return 7
+                                '''     
+                                
 
+                    if enemy[0][0] < mario_x:
+                        continue
+                    enemy_x = enemy[0][0]  # grabbing the location of the first enemy detected
+                # If Mario is found, use its location. If not, it's safer not to jump.
+                    if mario_locations:
+                        mario_location = mario_locations[0][0] 
+                        # Check if the first enemy is to the right of Mario
+                        if enemy_x - mario_location[0] < 50 and enemy_x - mario_location[0] > 0:
+                            if mario_location[1] > 190:
+                                if enemy_x - mario_location[0] < 17:
+                                    print("wanghuizou")
+                                    return 9
+                                if enemy_x - mario_location[0] > 20:
+                                    print("wotiaole")
+                                    return 4 
+                            # if (mario_location[1] < 160) and (mario_location[1] > 130):
+                            #     if enemy_x - mario_location[0] < 20:
+                            #         print("aiming the enemies")
+                            #         return 3
+                            #     if mario_location[0] - enemy_x < 20:
+                            #         print("aiming the enemies")
+                            #         return 8
+                            
+                            # print("wotiaole")
+                            # return 2  # This corresponds to the "right jump" action in SIMPLE_MOVEMENT
+                    '''
+        else:
+            print("Close to block 4")
+        if pipe_locations:
+            for pipe in pipe_locations:
+                pipe_x = pipe[0][0]
+                
+                if mario_locations:
+                    mario_x = mario_locations[0][0][0]  # Mario's x-coordinate
+                    distance_to_pipe = pipe_x - mario_x
+                    #print("Distance to pipe is", distance_to_pipe)
+                    if distance_to_pipe >= -40:
+
+                        # Check if Mario is on top of the pipe
+                        if is_on_top_of_pipe(mario_locations[0], pipe):
+                            #print("Mario is on top of the pipe")
+                            action = action_from_pipe_top(pipe, enemy_locations)
+                            #print("The action we are returning is", action)
+                            return action
+
+                        # Define the distance 'x' from the pipe where Mario should decide to jump
+                        x = 16  # Adjust this value based on your game's physics and behavior
+
+                        # Mario in open space, running to the right
+                        if distance_to_pipe > x + 20:
+                            return 3  # ['right', 'B']
+
+                        # Too close to the pipe, backtrack to distance x
+                        if 12 < distance_to_pipe < x:  # 10 is an arbitrary buffer, adjust as needed
+                            return 6  # ['left']
+
+                        # At distance x, decide whether to jump over or land on the pipe
+                        if x <= distance_to_pipe <= x + 20:
+                            if is_safe_to_jump_over_pipe(pipe, enemy_locations):
+                                #print("Safe to jump over the pipe at distance", distance_to_pipe)
+                                return 4  # ['right', 'A', 'B']
+                            else:
+                                #print("Not safe, attempting to land on the pipe!")
+                                return 2  # ['right', 'A']
+                        '''
+                        # If Mario is on the pipe, wait until it's safe
+                        if mario_x > pipe_x and not is_safe_to_jump_over_pipe(pipe, enemy_locations):
+                            #print("Waiting on top of the pipe for safety")
+                            return 0  # ['NOOP']
+                        '''
+
+
+        if block_locations:
+            for index, block in enumerate(block_locations):
+                # 获取当前块的X和Y坐标以及高度
+                block_x = block[0][0]
+                block_y = block[0][1]
+                block_height = block[1][1]
+                block_width = block[1][0]
+                block_name = block[2]
+                if index + 1 < len(block_locations):
+                    # 获取下一个块的值
+                    next_block = block_locations[index + 1]
+                    next_block_x = next_block[0][0]
+                    next_block_y = next_block[0][1]
+                    next_block_height = next_block[1][1]
+                    if (block_y == 224) and (next_block_y == 224):
+                        current_x = block_x
+                        next_x = next_block_x    
+                        # 检查两个块之间的间隔是否大于正常间隔
+                        if mario_locations:
+                            if (next_x - current_x > 16) and (current_x - mario_locations[0][0][0] < 20):
+                                #print("jumping over the gap")
+                                if (next_x - current_x <= 32):
+                                    return 4
+                                if (next_x - current_x > 32):
+                                    return 4
+                #here should to deal with the block4 
+                if block_name == 'block4':
+                    print("Dealing with block4 now")
+                    #print(enemy_locations)
+                    # print("trying to overcome the block4")
+                    if mario_locations:
+                        # highest_block_y = min(block[0][1] for block in block_locations if block_name == 'block4')  # 查找block4的最高位置
+                        # highest_blocks = [block for block in block_locations if block[0][1] == highest_block_y and block_name == 'block4']  # 找到所有最高位置的block4
+                        # 只考虑 block4 块的最高位置
+                        highest_block_y = min(block[0][1] for block in block_locations if block[2] == 'block4')  
+                        # 找到所有最高位置的 block4 块
+                        highest_blocks = [block for block in block_locations if block[0][1] == highest_block_y and block[2] == 'block4']  
+                        #print(highest_block_y)
+                        # print(highest_blocks)
+                        #print(highest_blocks[0][0][0])
+                        if (mario_locations[0][0][0] <= highest_blocks[0][0][0]):
+                            print("Dealing with not highest block")
+                            if (mario_locations[0][0][1]-block_y >= -5)and (mario_locations[0][0][1]-block_y <= 5):
+                                if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] >= 11) and (block_x - mario_locations[0][0][0] <= 13):
+                                    print("going back a little")
+                                    return 6
+                                if (mario_locations[0][0][0] <= block_x) and (block_x - mario_locations[0][0][0] < 115):
+                                    print("jump")
+                                    return 2
+                        print("We are now on the highest block")
+                        if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 4) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 16):
+                            print("fast run")
+                            return 3
+                        if (highest_blocks[0][0][0] -  mario_locations[0][0][0] >= 0) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 4):
+                            print("long jump")
+                            return 4
+                        if (highest_blocks[0][0][0] -  mario_locations[0][0][0] < 0) and (highest_blocks[0][0][0] -  mario_locations[0][0][0] > -100):
+                            print("fast run")
+                            return 3
+                #for the question block
+                '''
+                if block_name == 'question_block':
+                        #print("Location of questin bblock is",block[0])
+
+                        #print("Location of mario is",mario_locations[0][0][0])
+                        if is_block_close(mario_locations[0], block):
+                            #print("We are approaching a block")
+                                
+                            if block_name == 'block3':
+                                #print("The block has been hit")
+                                hitting_block = False
+                                return 1
+                            if is_safe_to_hit_block(mario_locations[0], enemy_locations):
+                                #print("There are no enemies near, safe to hit")
+                                if prev_action == 4:
+                                    hitting_block = True
+                                    return 0
+                                action = action_for_question_block(mario_locations[0], block)
+                                
+                                #if action == 5:
+                                #   hitting_block = True
+                                #print("returning action", action)
+                                return action
+                            # If it's not safe to hit the block, continue moving right
+                            else:
+                                hitting_block = False
+                                return 1  # Move right
+                        # If Mario is in the process of histting a block, he should stop and jump
+                #if hitting_block:
+                #   print("Mario is trying to hit block, don't move")
+                #  return 0  # Jump
+
+                '''
+                                
+
+                        
+
+        
+
+
+        # if step % 10 == 0:
+        #     # I have no strategy at the moment, so I'll choose a random action.
+        #     action = 1
+        #     return action
+        # else:
+        #     # With a random agent, I found that choosing the same random action
+        #     # 10 times in a row leads to slightly better performance than choosing
+        #     # a new random action every step.
     
+        #if block_locations:
+        #    for block in block_locations:
+        #        block_name = block[2]
+        #        if block_name == 'block4':
+                    #print("return 0")
+                    #return 0
 
+        if enemy_locations:
+            for enemy in enemy_locations:
+                enemy_location = enemy[0]
+                enemy_x, enemy_y = enemy[0]
+                if mario_locations:
+                    mario_location = mario_locations[0][0]
+                    #print("Printing mario location in if enemy_locations",mario_location)
+                    mario_x, mario_y = mario_location
+                # Check if the enemy is in front of Mario and within a certain distance (e.g., 50 pixels)
+                    if mario_x < enemy_x and (enemy_x - mario_x) < 120:
+                        return 1
 
-    # if step % 10 == 0:
-    #     # I have no strategy at the moment, so I'll choose a random action.
-    #     action = 1
-    #     return action
-    # else:
-    #     # With a random agent, I found that choosing the same random action
-    #     # 10 times in a row leads to slightly better performance than choosing
-    #     # a new random action every step.
-   
-    if block_locations:
-        for block in block_locations:
-            block_name = block[2]
-            if block_name == 'block4':
-                print("return 0")
-                return 0
-    if enemy_locations:
-         for enemy in enemy_locations:
-            enemy_location = enemy[0]
-            enemy_x, enemy_y = enemy[0]
-            if mario_locations:
-                mario_location = mario_locations[0][0]
-                print("Printing mario location in if enemy_locations",mario_location)
-                mario_x, mario_y = mario_location
-            # Check if the enemy is in front of Mario and within a certain distance (e.g., 50 pixels)
-                if mario_x < enemy_x and (enemy_x - mario_x) < 120:
-                    return 1
-
-
-    print("return 3")
-    return 3
+        while hitting_block == True:
+            print("Mario us trying to hit block, dont move")
+            return 0
+        #print("return 3")
+        return 3
     
 
 
 
 ################################################################################
 #Enemy Helper Functions
+def is_enemy_close(mario_location, enemy_locations, distance=5*BLOCK_SIZE):
+    """
+    Check if there's an enemy within a certain distance to the right of Mario.
+
+    Parameters:
+    - mario_location: Tuple containing Mario's (x, y) coordinates.
+    - enemy_locations: List of tuples containing the enemies' (x, y) coordinates.
+    - distance: The horizontal distance to check for nearby enemies.
+
+    Returns:
+    - True if there's an enemy close by. False otherwise.
+    """
+    mario_x = mario_location[0]
+    for enemy in enemy_locations:
+        enemy_x = enemy[0][0]
+        if mario_x < enemy_x <= mario_x + distance:
+            return True
+    return False
+
 def is_high_threat(mario_location, enemy_location, threat_distance=30):
     """
     Determines if an enemy is a high threat based on its proximity to Mario.
@@ -654,9 +795,9 @@ def safe_to_jump_over(mario_location, enemy_location, all_enemies):
     Returns:
     - True if it's safe for Mario to jump over the enemy. False otherwise.
     """
-    print("printing mario locations in safe_to_jump_over",mario_location)
+    #print("printing mario locations in safe_to_jump_over",mario_location)
     mario_x = mario_location[0]
-    print("printing mario_x locations in safe_to_jump_over",mario_x)
+    #print("printing mario_x locations in safe_to_jump_over",mario_x)
     mario_y = mario_location[1]
     enemy_x = enemy_location[0]
     enemy_y = enemy_location[1]
@@ -670,14 +811,35 @@ def safe_to_jump_over(mario_location, enemy_location, all_enemies):
 
     # Check for other enemies in the landing zone
     for other_enemy in all_enemies:
-        print("THis is the value of other enemy", other_enemy)
+        #print("THis is the value of other enemy", other_enemy)
         other_enemy_x = other_enemy[0][0]
-        print("This is the value of other_enemy_x", other_enemy_x)
+        #print("This is the value of other_enemy_x", other_enemy_x)
         other_enemy_y = other_enemy[0][1]
         if landing_zone_x_start <= other_enemy_x <= landing_zone_x_end and landing_zone_y_start <= other_enemy_y <= landing_zone_y_end:
             return False  # There's another enemy in the landing zone
 
     return True
+
+prev_mario_y = None  # Store the previous Y-coordinate of Mario
+
+def is_mario_on_ground(mario_location):
+    global prev_mario_y
+
+    mario_y = mario_location[1]  # Assuming mario_location is a tuple (x, y)
+
+    # If this is the first frame, set prev_mario_y and return False
+    if prev_mario_y is None:
+        prev_mario_y = mario_y
+        return False
+
+    # Check if the change in Mario's Y-coordinate is within a small threshold
+    if abs(prev_mario_y - mario_y) <= 2:  # 2 is an arbitrary threshold; adjust as needed
+        prev_mario_y = mario_y
+        return True
+
+    prev_mario_y = mario_y
+    return False
+
 
 def can_jump_over(screen, mario_location, enemy_location, threshold_distance=32):
     """
@@ -785,7 +947,7 @@ def is_on_top_of_pipe(mario_location, pipe):
 
     mario_x = mario_location[0][0]
     mario_y = mario_location[0][1]
-    print("The pipe charectersitxs we are checkig we are ontop of are", pipe)
+    #print("The pipe charectersitxs we are checkig we are ontop of are", pipe)
     pipe_x = pipe[0][0]
     pipe_y = pipe[0][1]
     pipe_width = pipe[1][0]
@@ -794,7 +956,6 @@ def is_on_top_of_pipe(mario_location, pipe):
     # Check if Mario's x-coordinate is within the horizontal bounds of the pipe
     if mario_x >= pipe_x and mario_x <= pipe_x + pipe_width:
         # Check if Mario's y-coordinate is just above the top of the pipe (with a small threshold for error)
-        if abs(mario_y - pipe_y) < 5:  # 5 is an arbitrary threshold; adjust as needed
             return True
 
     return False
@@ -815,20 +976,141 @@ def action_from_pipe_top(pipe, enemy_locations):
     pipe_width, pipe_height = pipe[1]
 
     # Define a region just below the pipe where we'll check for enemies
-    danger_zone = (pipe_x, pipe_y + pipe_height, pipe_width, 20)  # 20 is an arbitrary height; adjust as needed
+    danger_zone = (pipe_x, pipe_y + pipe_height -5 , pipe_width + 6 * BLOCK_SIZE, 3 * BLOCK_SIZE)  # 20 is an arbitrary height; adjust as needed
+    # Define a region 4 to 7 blocks away from the bottom of the pipe
+    long_jump_zone = (pipe_x + pipe_width + 4 * BLOCK_SIZE, pipe_y + pipe_height - 5 , pipe_width + 7 * BLOCK_SIZE, 3 * BLOCK_SIZE)
 
+    danger_detected = False
+    long_jump_danger_detected = False
+    '''
     for enemy in enemy_locations:
         enemy_x, enemy_y = enemy[0]
         enemy_width, enemy_height = enemy[1]
-
+        
         # Check if any part of the enemy overlaps with the danger zone
         if (enemy_x + enemy_width > danger_zone[0] and enemy_x < danger_zone[0] + danger_zone[2] and
             enemy_y + enemy_height > danger_zone[1] and enemy_y < danger_zone[1] + danger_zone[3]):
             # If an enemy is detected in the danger zone, jump and move right
+            #print("Not in danger zone")
             return 4  # ['right', 'A', 'B']
-
+    
     # If no enemies are detected in the danger zone, simply move right
+    #print("In danger zone")
     return 1  # ['right']
+    '''
+    for enemy in enemy_locations:
+        enemy_x, enemy_y = enemy[0]
+        enemy_width, enemy_height = enemy[1]
+
+        if (enemy_x + enemy_width > danger_zone[0] and enemy_x < danger_zone[0] + danger_zone[2] and
+            enemy_y + enemy_height > danger_zone[1] and enemy_y < danger_zone[1] + danger_zone[3]):
+            danger_detected = True
+
+        if (enemy_x + enemy_width > long_jump_zone[0] and enemy_x < long_jump_zone[0] + long_jump_zone[2] and
+            enemy_y + enemy_height > long_jump_zone[1] and enemy_y < long_jump_zone[1] + long_jump_zone[3]):
+            long_jump_danger_detected = True
+
+    if danger_detected and not long_jump_danger_detected:
+        print("Enemy close, jumping over")
+        return 4  # Long jump
+    elif danger_detected and long_jump_danger_detected:
+        print("Not safe to jump, waiting")
+        return 0  # Wait
+    else:
+        print("walking off")
+        return 1  # Move right
+
+
+
+
+
+
+
+
+########################BLOCK HELPER FUNCTIONS#############################################
+def is_safe_to_hit_block(mario_location, enemy_locations, safety_distance=3*BLOCK_SIZE):
+    """
+    Determines if it's safe for Mario to hit a ? block based on the proximity of enemies.
+
+    Parameters:
+    - mario_location: Tuple containing Mario's (x, y) coordinates.
+    - enemy_locations: List of tuples containing the enemies' (x, y) coordinates.
+    - safety_distance: The horizontal distance within which the presence of an enemy makes it unsafe to hit the block.
+
+    Returns:
+    - True if it's safe for Mario to hit the block. False otherwise.
+    """
+
+    mario_x = mario_location[0][0]
+    for enemy in enemy_locations:
+        enemy_x = enemy[0][0]
+        if mario_x - safety_distance <= enemy_x <= mario_x + safety_distance:
+            return False
+    return True
+
+def action_for_question_block(mario_location, block_location):
+    """
+    Determines the action Mario should take to hit a ? block.
+
+    Parameters:
+    - mario_location: Tuple containing Mario's (x, y) coordinates.
+    - block_location: Tuple containing the block's (x, y) coordinates.
+
+    Returns:
+    - An action for Mario to take.
+    """
+    TOLERANCE = 15
+    mario_x= mario_location[0][0]
+    block_x= block_location[0][0]
+    block_width = block_location[1][0]
+
+    # If Mario is directly below the block, jump
+    if block_x - BLOCK_SIZE - TOLERANCE <= mario_x <= block_x - BLOCK_SIZE + TOLERANCE:
+        #print("Jumping to hit the block")
+        return 4  # Jump
+    elif mario_x < block_x:
+        return 3
+    # If Mario is to the right of the block, move left
+    elif 0 < mario_x - block_x < 32: 
+        return 6  # Move left
+    # If Mario is to the left of the block, move right
+    else: return 3
+
+def is_block_close(mario_location, block_location, block_distance=32):
+    """
+    Determines if a ? block is close enough to Mario.
+
+    Parameters:
+    - mario_location: Tuple containing Mario's (x, y) coordinates.
+    - block_location: Tuple containing the block's (x, y) coordinates.
+    - block_distance: The horizontal distance within which a block is considered close.
+
+    Returns:
+    - True if the block is close to Mario. False otherwise.
+    """
+
+    mario_x = mario_location[0][0]
+    block_x = block_location[0][0]
+
+    horizontal_distance = abs(mario_x - block_x)
+
+    if horizontal_distance <= block_distance:
+        return (True, 3)  # Mario is close to the block, return True and action 3
+    else:
+        return (False, None)  # Mario is not close, return False and None for action
+
+# Check if Mario is close to a block4 type
+def is_close_to_block4(mario_location, block_locations):
+    for block in block_locations:
+        block_name = block[2]
+        block_x, block_y = block[0]
+        mario_x, mario_y = mario_location
+
+        # Assuming each block's width is equivalent to 1 unit/block
+        if block_name == 'block4' and abs(block_x - mario_x) < 3:
+            return True
+    return False
+
 
 ################################################################################
 env = gym.make("SuperMarioBros-v0", apply_api_compatibility=True, render_mode="human")
