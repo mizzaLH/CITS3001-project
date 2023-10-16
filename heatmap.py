@@ -15,7 +15,7 @@ def extract_coordinates(filename):
                 
     return coordinates
 
-filename = "/Users/michaelhardie/Downloads/mario_info.txt"
+filename = "/Users/michaelhardie/Desktop/Uni/2023/Algorithms/mario_RB1.txt"
 data = extract_coordinates(filename)
 
 # Unpack x and y values
@@ -26,7 +26,7 @@ heatmap, xedges, yedges = np.histogram2d(x_values, y_values, bins=(100,100))
 extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
 
 plt.figure(figsize=(12, 8))
-plt.imshow(heatmap.T, extent=extent, origin='lower', aspect='auto', cmap='spring')
+plt.imshow(heatmap.T, extent=extent, origin='lower', aspect='auto', cmap='gray')
 plt.colorbar(label="Frequency")
 plt.title("Player Positions Heatmap")
 plt.xlabel("x position")

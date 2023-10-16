@@ -17,9 +17,9 @@ def extract_coordinates(filename):
     return coordinates
 
 # Test the function
-filename = "/Users/michaelhardie/Downloads/mario_info.txt"
+filename = "/Users/michaelhardie/Desktop/Uni/2023/Algorithms/mario_RB1.txt"
 data = extract_coordinates(filename)
-
+'''
 games = [data[i:i+3] for i in range(0, len(data), 3)]
 # Unpack x and y values
 num_rows = len(games) // 3
@@ -49,4 +49,3 @@ plt.xlabel('x')
 plt.ylabel('y')
 plt.grid(True)
 plt.show()
-'''

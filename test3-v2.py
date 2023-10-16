@@ -399,7 +399,7 @@ def make_action(screen, info, step, env, prev_action):
     else: 
         #print("Inside of else")    
             
-        if not is_close_to_block4(mario_locations[0][0], block_locations):
+        if  mario_locations and not is_close_to_block4(mario_locations[0][0], block_locations):
             if enemy_locations:
                 if mario_locations:  # Assuming you have this line somewhere in your code to get Mario's current location
                     mario_location = mario_locations[0][0]
@@ -1126,7 +1126,7 @@ initial_lives = 2
 previous_life = 2  # Mario 的初始生命值
 previous_info = None  # 初始时没有上一个info数据
 file_object = open('mario_info.txt', 'w')  # 以写入模式打开文件
-
+'''
 for step in range(100000):
     if obs is not None:
         action = make_action(obs, info, step, env, action)
@@ -1150,6 +1150,35 @@ for step in range(100000):
         file_object.write(info_str)  # 将字符串写入文件
     previous_life = current_life  # 更新 previous_life 以备下次检查
     previous_info = info  # 更新 previous_info 以备下次检查
+'''
+first_playthrough = True  # Initialize the flag
+
+for step in range(100000):
+    if obs is not None:
+        action = make_action(obs, info, step, env, action)
+    else:
+        action = env.action_space.sample()
+
+    obs, reward, terminated, truncated, info = env.step(action)
+
+    # Store information after every action during the first playthrough
+    if first_playthrough:
+        info_str = str(info) + '\n'
+        file_object.write(info_str)
+        file_object.flush()
+
+    current_life = info['life']
+
+    # Check if Mario lost a life
+    if (previous_life == 2 and current_life == 1) or \
+       (previous_life == 1 and current_life == 0) or \
+       (previous_life == 0 and current_life == 2):
+        # If it's the first playthrough, stop storing information after Mario loses a life
+        if first_playthrough:
+            first_playthrough = False
+
+    previous_life = current_life
+    previous_info = info
 
 
     done = terminated or truncated
